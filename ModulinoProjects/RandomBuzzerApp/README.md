@@ -10,8 +10,8 @@ prints a tally every 10 changes.
 
 | Level | Sound | Pitch |
 |-------|-------|-------|
-| 1 | low (quietest) | 400 Hz  |
-| 2 | mid            | 1500 Hz |
+| 1 | low (still loud) | 2500 Hz  |
+| 2 | mid            | 3300 Hz |
 | 3 | high (loudest) | 4000 Hz |
 
 Tune `levelFrequency[]`, `minHoldMs` and `maxHoldMs` in `sketch/sketch.ino`.

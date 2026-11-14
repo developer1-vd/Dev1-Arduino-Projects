@@ -14,6 +14,10 @@
   which sounds noticeably louder. The sound stops when the button is released,
   and the LED above the held button lights up.
 
+  Works on any board with a Qwiic connector, including the UNO Q and
+  VENTUNO Q in the Arduino IDE (select the board after installing the
+  "Arduino UNO Q Zephyr Core" in the Boards Manager).
+
   Requires the "Modulino" library (Library Manager).
 */
 
@@ -35,7 +39,12 @@ unsigned long lastToneSentMs = 0;
 
 void setup() {
   Serial.begin(9600);
+#if defined(ARDUINO_UNO_Q) || defined(ARDUINO_VENTUNO_Q)
+  // On the UNO Q and VENTUNO Q the Qwiic connector is on the second I2C bus
+  Modulino.begin(Wire1);
+#else
   Modulino.begin();
+#endif
   buttons.begin();
   buzzer.begin();
 
