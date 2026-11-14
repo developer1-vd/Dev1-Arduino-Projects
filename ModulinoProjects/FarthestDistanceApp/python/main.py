@@ -3,7 +3,9 @@
 The sketch sends Bridge.notify("distance", now_mm, farthest_mm) 4 times a
 second (-1 means no reading). Sweep the Modulino Distance slowly across the
 scene; this prints the current reading and the farthest object seen in the
-last few seconds, and announces each new farthest record.
+last few seconds, and announces each new farthest record. When a Modulino
+Buzzer is connected, the sketch also beeps when something comes close, and
+this prints when the alarm starts and stops.
 """
 
 from arduino.app_utils import App, Bridge
@@ -46,9 +48,27 @@ def sensor_status(found: bool):
         )
 
 
+def alarm(on: bool, now_mm: int):
+    """Called from the sketch when something comes close or moves away."""
+    if on:
+        print(f"!!! Something is close: {fmt(int(now_mm))} !!!")
+    else:
+        print("All clear.")
+
+
+def buzzer_status(found: bool):
+    """Called from the sketch after it looks for the Modulino Buzzer."""
+    if found:
+        print("Modulino Buzzer found: proximity alarm on (beeps under 40 cm).")
+    else:
+        print("Modulino Buzzer NOT found: distances only, no proximity alarm.")
+
+
 print("Registering callbacks.")
 Bridge.provide("distance", distance)
 Bridge.provide("sensor_status", sensor_status)
+Bridge.provide("alarm", alarm)
+Bridge.provide("buzzer_status", buzzer_status)
 
 print("Starting App...")
 App.run()

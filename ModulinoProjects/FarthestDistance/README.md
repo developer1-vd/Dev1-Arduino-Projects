@@ -22,9 +22,17 @@ means the farthest object the sensor can actually measure.
 Tune `windowMs` (how long the farthest value is kept) and `reportEveryMs` at
 the top of the sketch.
 
+## Proximity alarm
+Add a **Modulino Buzzer** to the Qwiic chain and it works like a parking
+sensor: it beeps when something comes closer than **40 cm**, beeps faster
+as it gets closer, and sounds continuously below **10 cm**. Change
+`alertMm` and `solidMm` at the top of the sketch to adjust the distances.
+The buzzer is optional; without it you still get the distances.
+
 ## Hardware
 - Arduino board with a Qwiic connector (e.g. UNO R4 WiFi, UNO Q, VENTUNO Q)
 - Modulino Distance + Qwiic cable
+- Optional: Modulino Buzzer + Qwiic cable (proximity alarm)
 
 ## Software
 Install the **Arduino_Modulino** library from the Library Manager, open

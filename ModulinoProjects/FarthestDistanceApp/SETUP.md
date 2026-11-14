@@ -12,7 +12,7 @@ This app runs unchanged on both boards. Both put the Qwiic connector on the
 | Board | UNO Q (2 GB or 4 GB) | VENTUNO Q |
 | Power | USB-C, 5 V 3 A | Barrel jack 7–24 V (≥ 3 A), e.g. Arduino 65 W USB-C supply with its barrel adapter |
 | Link to your computer | USB-C cable (data + power) | USB-C cable (data only, see power note) |
-| Modulino | Modulino Distance, 1 Qwiic cable | same |
+| Modulinos | Modulino Distance, Modulino Buzzer (optional, for the alarm), 2 Qwiic cables | same |
 | Software | Arduino App Lab | Arduino App Lab |
 
 Get Arduino App Lab from the App Lab section of
@@ -35,7 +35,9 @@ Then connect USB-C to your computer for data.
 1. With the board off, plug a Qwiic cable from the board's **Qwiic**
    connector into the Modulino Distance. Point its sensor (the small
    window on the front) away from you, with nothing covering it.
-2. The Qwiic connector is **3.3 V only**; use Qwiic/Modulino parts only.
+2. For the proximity alarm, plug a second Qwiic cable from the Distance's
+   other connector into the Modulino Buzzer (daisy-chain).
+3. The Qwiic connector is **3.3 V only**; use Qwiic/Modulino parts only.
 
 ## 3. First connection in App Lab
 
@@ -73,12 +75,15 @@ Troubleshooting:
 
 1. Press **Run**. App Lab compiles and uploads the sketch, then starts
    `python/main.py`.
-2. The console says `Modulino Distance found.` (or `NOT found`, if the cable
-   is loose).
+2. The console says `Modulino Distance found.` and `Modulino Buzzer found`
+   (or `NOT found`, if a cable is loose).
 3. Slowly sweep the sensor across the room. The console shows the current
    reading and the farthest one from the last 5 seconds, e.g.
    `now: 41.2 cm  farthest: 1.19 m`, and announces each new farthest object.
    Anything beyond about 1.2 m shows as `out of range`.
+4. Move your hand toward the sensor: below 40 cm the buzzer beeps, faster as
+   you get closer, and continuously below 10 cm. The console prints
+   `!!! Something is close: 25.3 cm !!!` and `All clear.`
 
 ## Optional: run at startup
 

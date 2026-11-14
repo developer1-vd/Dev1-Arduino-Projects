@@ -14,6 +14,13 @@ now:      41.2 cm  farthest:      1.19 m  ########
 
 Objects beyond the sensor's range (roughly 1.2 m) show as `out of range`.
 
+## Proximity alarm
+Add a **Modulino Buzzer** to the Qwiic chain and it works like a parking
+sensor: it beeps when something comes closer than **40 cm**, beeps faster
+as it gets closer, and sounds continuously below **10 cm**. Change
+`alertMm` and `solidMm` at the top of the sketch to adjust the distances.
+The buzzer is optional; without it you still get the distances.
+
 ## Layout
 - `app.yaml` - app name, icon and description
 - `sketch/sketch.ino` - reads the sensor and tracks the farthest reading
