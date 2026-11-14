@@ -1,0 +1,3 @@
+name: Vibro Button Levels
+icon: 📳
+description: Hold one of the 3 Modulino Buttons to run the Modulino Vibro from barely vibrating to super vibrating. Python logs each press.
