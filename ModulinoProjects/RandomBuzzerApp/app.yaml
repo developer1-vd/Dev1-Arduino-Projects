@@ -1,0 +1,3 @@
+name: Random Buzzer
+icon: 🎲
+description: A Modulino Buzzer randomly jumps between low and high levels. Python logs each change.
