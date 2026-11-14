@@ -1,5 +1,5 @@
 /*
-  ButtonBuzzerLevels - Arduino App Lab version (UNO Q)
+  ButtonBuzzerLevels - Arduino App Lab version (UNO Q and VENTUNO Q)
 
   While held, each Modulino Button plays the Modulino Buzzer at a higher
   "loudness" level (A = quietest, C = loudest). The buzzer has no volume
@@ -32,7 +32,7 @@ unsigned long lastToneSentMs = 0;
 void setup() {
   Bridge.begin();
 
-  // On the UNO Q the Qwiic connector is on Wire1
+  // On the UNO Q and VENTUNO Q the Qwiic connector is on Wire1
   Modulino.begin(Wire1);
   buttons.begin();
   buzzer.begin();

@@ -1,6 +1,7 @@
 # Button Buzzer Levels (Arduino App Lab)
 
-The App Lab version of `../ButtonBuzzerLevels`, for the Arduino UNO Q.
+The App Lab version of `../ButtonBuzzerLevels`, for the Arduino UNO Q and
+VENTUNO Q. **Step-by-step setup for both boards: [SETUP.md](SETUP.md).**
 
 Hold a button on the Modulino Buttons to play the Modulino Buzzer at one of 3
 loudness levels; release it to stop. Each time the held button changes, the
@@ -23,8 +24,4 @@ piezo's ~4 kHz resonance. Tune `levelFrequency[]` in `sketch/sketch.ino`.
 - `python/main.py` - runs on Linux: receives `level_changed` and logs it
 
 ## Run it
-1. Connect the Modulino Buttons and Buzzer to the UNO Q's Qwiic connector.
-2. Copy this folder into your App Lab apps folder (or create a new app and
-   replace its files with these).
-3. Open it in Arduino App Lab and press **Run**. The Python output shows in
-   the app's console.
+See [SETUP.md](SETUP.md) for power, wiring, App Lab and troubleshooting.
