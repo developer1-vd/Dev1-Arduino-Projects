@@ -38,8 +38,20 @@ def level_changed(level: int, hold_ms: int):
         )
 
 
-print("Registering 'level_changed' callback.")
+def buzzer_status(found: bool, address: int):
+    """Called from the sketch when it looks for the Modulino Buzzer."""
+    if found:
+        print(f"Modulino Buzzer found at I2C address 0x{int(address):02X}.")
+    else:
+        print(
+            "Modulino Buzzer NOT found - check the Qwiic cable goes from the "
+            "board's Qwiic connector to the buzzer. Retrying..."
+        )
+
+
+print("Registering callbacks.")
 Bridge.provide("level_changed", level_changed)
+Bridge.provide("buzzer_status", buzzer_status)
 
 print("Starting App... the buzzer will randomly go low and high.")
 App.run()
