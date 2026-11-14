@@ -1,6 +1,7 @@
 # ButtonBuzzerLevels
 
-Three buttons, three buzzer levels, using Arduino Modulino nodes.
+Three buttons, three buzzer levels, using Arduino Modulino nodes. The buzzer
+sounds continuously while a button is held and stops when it is released.
 
 | Button | Level | Frequency |
 |--------|-------|-----------|
