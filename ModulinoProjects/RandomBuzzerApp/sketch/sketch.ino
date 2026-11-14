@@ -9,7 +9,7 @@
   Each change is sent to Python through the Bridge:
     Bridge.notify("level_changed", level, holdMs)   level = 1..3
   At startup it also reports whether the buzzer was found:
-    Bridge.notify("buzzer_status", found, i2cAddress)
+    Bridge.notify("buzzer_status", found)
   and plays a short test beep.
 */
 
@@ -30,7 +30,7 @@ bool buzzerFound = false;
 // to Python, so a wiring/detection problem shows up in the App Lab console.
 bool connectBuzzer() {
   buzzerFound = buzzer.begin();
-  Bridge.notify("buzzer_status", buzzerFound, (int)buzzer.getAddress());
+  Bridge.notify("buzzer_status", buzzerFound);
   Monitor.println(buzzerFound ? "Modulino Buzzer found" : "Modulino Buzzer NOT found");
   return buzzerFound;
 }

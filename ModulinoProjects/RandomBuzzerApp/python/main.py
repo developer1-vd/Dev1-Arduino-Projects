@@ -38,10 +38,10 @@ def level_changed(level: int, hold_ms: int):
         )
 
 
-def buzzer_status(found: bool, address: int):
+def buzzer_status(found: bool):
     """Called from the sketch when it looks for the Modulino Buzzer."""
     if found:
-        print(f"Modulino Buzzer found at I2C address 0x{int(address):02X}.")
+        print("Modulino Buzzer found.")
     else:
         print(
             "Modulino Buzzer NOT found - check the Qwiic cable goes from the "
