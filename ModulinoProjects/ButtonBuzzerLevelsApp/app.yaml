@@ -1,0 +1,3 @@
+name: Button Buzzer Levels
+icon: 🔊
+description: Hold one of the 3 Modulino Buttons to play the Modulino Buzzer at one of 3 loudness levels. Python logs each press.
