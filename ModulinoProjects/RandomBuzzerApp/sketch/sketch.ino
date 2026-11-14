@@ -2,7 +2,7 @@
   RandomBuzzer - Arduino App Lab version (UNO Q and VENTUNO Q)
 
   Uses only a Modulino Buzzer. It plays continuously and randomly jumps
-  between three levels (low 400 Hz, mid 1500 Hz, high 4000 Hz), holding each
+  between three levels (low 2500 Hz, mid 3300 Hz, high 4000 Hz), holding each
   for a random time. Higher pitches are closer to the piezo's ~4 kHz
   resonance, so they also sound louder.
 
@@ -18,7 +18,9 @@
 
 ModulinoBuzzer buzzer;
 
-const int levelFrequency[3] = { 400, 1500, 4000 };
+// All levels are kept near the piezo's ~4 kHz resonance, where it is
+// loudest. Lower pitches (e.g. 400 Hz) are much quieter on this buzzer.
+const int levelFrequency[3] = { 2500, 3300, 4000 };
 
 // Random hold time for each level (ms)
 const unsigned long minHoldMs = 200;

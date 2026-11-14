@@ -4,9 +4,9 @@
   Uses only a Modulino Buzzer (connected via Qwiic). No buttons.
   The buzzer plays continuously and randomly jumps between three levels:
 
-    level 1 -> low  (quietest, 400 Hz)
-    level 2 -> mid  (1500 Hz)
-    level 3 -> high (loudest, 4000 Hz)
+    level 1 -> low  (2500 Hz)
+    level 2 -> mid  (3300 Hz)
+    level 3 -> high (loudest, 4000 Hz = buzzer resonance)
 
   Each level is held for a random time before the next random jump.
 
@@ -21,7 +21,9 @@
 
 ModulinoBuzzer buzzer;
 
-const int levelFrequency[3] = { 400, 1500, 4000 };
+// All levels are kept near the piezo's ~4 kHz resonance, where it is
+// loudest. Lower pitches (e.g. 400 Hz) are much quieter on this buzzer.
+const int levelFrequency[3] = { 2500, 3300, 4000 };
 const char* levelName[3] = { "low", "mid", "high" };
 
 // Random hold time for each level (ms)
