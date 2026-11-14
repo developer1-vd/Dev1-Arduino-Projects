@@ -14,6 +14,10 @@
   duration. Its piezo is loudest near its ~4 kHz resonance, so higher levels
   also sound louder.
 
+  Works on any board with a Qwiic connector, including the UNO Q and
+  VENTUNO Q in the Arduino IDE (select the board after installing the
+  "Arduino UNO Q Zephyr Core" in the Boards Manager).
+
   Requires the "Modulino" (Arduino_Modulino) library (Library Manager).
 */
 
@@ -32,7 +36,12 @@ const unsigned long maxHoldMs = 1500;
 
 void setup() {
   Serial.begin(9600);
+#if defined(ARDUINO_UNO_Q) || defined(ARDUINO_VENTUNO_Q)
+  // On the UNO Q and VENTUNO Q the Qwiic connector is on the second I2C bus
+  Modulino.begin(Wire1);
+#else
   Modulino.begin();
+#endif
   buzzer.begin();
 
   // Seed the random generator from an unconnected analog pin
