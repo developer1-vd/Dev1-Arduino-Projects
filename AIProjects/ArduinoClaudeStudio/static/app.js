@@ -3,6 +3,7 @@
 
 const $ = (id) => document.getElementById(id);
 const state = {
+  mode: "arduino",     // "arduino" (computer + arduino-cli) or "applab" (on the board)
   file: null,          // path of the open file
   savedContent: "",
   boardsInstalled: [],
@@ -130,10 +131,12 @@ function highlightFile() {
 }
 
 $("new-sketch").onclick = async () => {
-  const name = prompt("New sketch name (letters, digits, _ or -):");
+  const applab = state.mode === "applab";
+  const name = prompt(applab ? "New App Lab app name:" : "New sketch name (letters, digits, _ or -):");
   if (!name) return;
   try {
-    const { path } = await api("POST", "/api/sketch", { name });
+    const { path } = applab ? await api("POST", "/api/apps/new", { name })
+                            : await api("POST", "/api/sketch", { name });
     await loadFiles();
     await openFile(path);
   } catch (e) { alert(e.message); }
@@ -223,10 +226,41 @@ document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); saveFile(); }
 });
 
+// ---------------- App Lab mode: run / stop apps ----------------
+function currentApp() {
+  return state.file ? state.file.split("/")[0] : null;
+}
+
+async function loadAppStatus() {
+  try {
+    const apps = await api("GET", "/api/apps");
+    const running = apps.find((a) => a.status === "running" || a.status === "starting");
+    $("app-status").textContent = running ? `Running: ${running.name || running.folder} (${running.status})`
+                                          : "No app running";
+  } catch (e) { $("app-status").textContent = e.message; }
+}
+
+$("run-app").onclick = async () => {
+  const app = currentApp();
+  if (!app) return alert("Open a file of the app you want to run.");
+  showTab("build");
+  if (editor.getValue() !== state.savedContent) await saveFile();
+  $("app-status").textContent = `Starting ${app}…`;
+  try { await api("POST", "/api/apps/run", { app }); }
+  catch (e) { appendLine($("build"), e.message, "line-error"); }
+  loadAppStatus();
+};
+$("stop-app").onclick = async () => {
+  try { await api("POST", "/api/apps/stop", {}); }
+  catch (e) { appendLine($("build"), e.message, "line-error"); }
+  loadAppStatus();
+};
+
 // ---------------- bottom tabs + serial ----------------
 function showTab(name) {
   for (const t of document.querySelectorAll(".tab")) t.classList.toggle("active", t.dataset.tab === name);
   $("build").hidden = name !== "build";
+  $("applog").hidden = name !== "applog";
   $("serial-pane").hidden = name !== "serial";
 }
 for (const t of document.querySelectorAll(".tab")) t.onclick = () => showTab(t.dataset.tab);
@@ -235,8 +269,8 @@ $("serial-toggle").onclick = async () => {
   try {
     if (state.serialOpen) await api("POST", "/api/serial/close");
     else {
-      if (!$("port").value) return alert("Select a port first.");
-      await api("POST", "/api/serial/open", { port: $("port").value, baud: Number($("baud").value) });
+      if (state.mode === "arduino" && !$("port").value) return alert("Select a port first.");
+      await api("POST", "/api/serial/open", { port: $("port").value || "", baud: Number($("baud").value) });
     }
   } catch (e) { appendLine($("serial"), e.message, "line-error"); }
 };
@@ -264,7 +298,7 @@ function addMsg(cls, text, markdown = false) {
 }
 
 function toolLabel(name, input) {
-  const short = name.replace(/^mcp__arduino__/, "arduino.");
+  const short = name.replace(/^mcp__(arduino|applab)__/, "$1.");
   let detail = "";
   try {
     const obj = JSON.parse(input);
@@ -380,10 +414,16 @@ function connect() {
         $("build-status").textContent = `${ev.title}: ${ev.ok ? "done" : "failed"}`;
         break;
       case "serial_line": appendLine($("serial"), ev.line); break;
+      case "log_line": appendLine($("applog"), ev.line); break;
+      case "log_status":
+        if (ev.open) { $("applog").innerHTML = ""; showTab("applog"); }
+        appendLine($("applog"), ev.open ? `── ${ev.app} Python log ──` : "── log ended ──", "line-head");
+        break;
+      case "apps_changed": loadAppStatus(); break;
       case "serial_status":
         state.serialOpen = ev.open;
         $("serial-toggle").textContent = ev.open ? "Close" : "Open";
-        appendLine($("serial"), ev.open ? `── connected to ${ev.port} at ${ev.baud} baud ──`
+        appendLine($("serial"), ev.open ? `── connected to ${ev.port}${ev.baud ? ` at ${ev.baud} baud` : ""} ──`
           : `── disconnected${ev.error ? ": " + ev.error : ""} ──`, ev.error ? "line-error" : "line-head");
         break;
     }
@@ -395,9 +435,18 @@ function connect() {
   const savedBaud = recall("baud");
   if (savedBaud) $("baud").value = savedBaud;
   const info = await api("GET", "/api/info");
+  state.mode = info.mode;
+  document.body.classList.add("mode-" + info.mode);
   $("workspace-path").textContent = info.workspace;
+  if (info.mode === "applab") {
+    $("files-title").textContent = "Apps";
+    $("new-sketch").title = "New App Lab app";
+    $("build-tab").textContent = "Run log";
+    loadAppStatus();
+  }
   if (!info.arduino_cli) {
-    appendLine($("build"), "arduino-cli was not found. Install it and restart (see README).", "line-error");
+    const tool = info.mode === "applab" ? "arduino-app-cli" : "arduino-cli";
+    appendLine($("build"), `${tool} was not found. Install it and restart (see README).`, "line-error");
   }
   connect();
   const files = await loadFiles();
@@ -405,5 +454,5 @@ function connect() {
   const first = files.includes(last) ? last : files.find((f) => f.endsWith(".ino"));
   if (first) await openFile(first);
   addMsg("info", "Ask Claude to write a sketch, fix a compile error, or upload and check the serial output.");
-  if (info.arduino_cli) loadBoards();
+  if (info.arduino_cli && info.mode === "arduino") loadBoards();
 })();

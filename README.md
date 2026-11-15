@@ -31,7 +31,7 @@ Most projects come in two versions:
 
 | Project | What it does |
 |---|---|
-| [ArduinoClaudeStudio](AIProjects/ArduinoClaudeStudio/) | A local WebUI for writing Arduino code with Claude Code: editor, compile and upload with `arduino-cli`, serial monitor, and a Claude chat that can write, fix, upload and test sketches on your board. |
+| [ArduinoClaudeStudio](AIProjects/ArduinoClaudeStudio/) | A local WebUI for writing Arduino code with Claude Code: editor, compile and upload, serial monitor, and a Claude chat that can write, fix, upload and test code on your board. Runs on your computer (sketches via `arduino-cli`) or directly on the UNO Q / VENTUNO Q (App Lab apps via App Lab's engine). |
 
 ## Getting started
 

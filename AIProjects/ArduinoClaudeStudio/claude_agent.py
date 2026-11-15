@@ -38,6 +38,7 @@ from claude_agent_sdk import (
     tool,
 )
 
+from applab import AppLabCli, valid_app_name
 from arduino import ArduinoCli, Hub, SerialMonitor
 
 # can_use_tool is meant to handle only the tools that ALLOWED_TOOLS doesn't
@@ -90,6 +91,68 @@ ALLOWED_TOOLS = [
 ]
 
 
+APPLAB_PROMPT_APPEND = """
+You are the coding assistant inside Arduino Claude Studio, running directly on
+an Arduino UNO Q / VENTUNO Q in App Lab mode. The user sees an editor, a run
+log, the app's Python log and the microcontroller's serial monitor next to
+this chat.
+
+Your working directory is the board's apps folder (~/ArduinoApps). Each
+project is an App Lab app folder:
+- app.yaml: name, description, icon, bricks (list; [] if none).
+- python/main.py: required. Runs on Linux in a container. Pattern:
+    from arduino.app_utils import App, Bridge
+    def on_reading(value: int): print(value)
+    Bridge.provide("on_reading", on_reading)   # sketch calls it
+    App.run()                                   # or App.run(user_loop=loop)
+  Bridge.call("name", args) calls a function the sketch provides.
+- python/requirements.txt: optional pip packages.
+- sketch/sketch.ino: optional, runs on the microcontroller (Zephyr core):
+    #include <Arduino_RouterBridge.h>
+    Bridge.begin(); Bridge.provide("name", fn); Bridge.notify("name", args...);
+    Monitor.begin(); Monitor.println(...);   // shows in the serial monitor
+- sketch/sketch.yaml: required with a sketch:
+    profiles:
+      default:
+        platforms:
+          - platform: arduino:zephyr
+        libraries:
+          - Arduino_Modulino (0.7.0)      # only if used, with its dependencies
+    default_profile: default
+  For Arduino_Modulino 0.7.0 also list these dependencies:
+  ArduinoGraphics (1.1.4), Arduino_HS300x (1.0.0), Arduino_LPS22HB (1.0.2),
+  Arduino_LSM6DSOX (1.1.2), Arduino_LTR381RGB (1.0.0),
+  STM32duino VL53L4CD (1.0.5), STM32duino VL53L4ED (1.0.1), each written as
+  "- dependency: Name (version)".
+- Modulinos connect to the Qwiic connector, which is Wire1:
+  #include <Arduino_Modulino.h> and Modulino.begin(Wire1).
+
+Tools (use these, not shell commands, so the user sees the output):
+- mcp__applab__list_apps: the user's apps and their status.
+- mcp__applab__create_app: create a new app with App Lab's template, then
+  edit its files.
+- mcp__applab__run_app: compile and flash the sketch and start the app (like
+  Run in App Lab). Stops any other running app first. Read the output: fix
+  compile errors and run again until it starts.
+- mcp__applab__stop_app: stop the running app.
+- mcp__applab__read_app_logs: the running app's Python output.
+- mcp__applab__serial_read: the microcontroller's Monitor output.
+
+Only edit apps inside the apps folder. Don't edit or run examples. Starting an
+app takes a while (it compiles the sketch); that's normal.
+"""
+
+APPLAB_ALLOWED_TOOLS = [
+    "Read", "Glob", "Grep", "Edit", "Write", "TodoWrite",
+    "mcp__applab__list_apps",
+    "mcp__applab__create_app",
+    "mcp__applab__run_app",
+    "mcp__applab__stop_app",
+    "mcp__applab__read_app_logs",
+    "mcp__applab__serial_read",
+]
+
+
 def _text(s: str) -> dict[str, Any]:
     return {"content": [{"type": "text", "text": s}]}
 
@@ -100,11 +163,13 @@ def _short(value: Any, limit: int = 4000) -> str:
 
 
 class ChatSession:
-    def __init__(self, ws: Any, hub: Hub, cli: ArduinoCli, monitor: SerialMonitor) -> None:
+    def __init__(self, ws: Any, hub: Hub, cli: ArduinoCli | None,
+                 monitor: SerialMonitor | None, applab: AppLabCli | None = None) -> None:
         self.ws = ws
         self.hub = hub
         self.cli = cli
         self.monitor = monitor
+        self.applab = applab   # set in App Lab mode (running on the board)
         self.selection: dict[str, Any] = {}  # fqbn, port, baud, file from the UI
         self.client: ClaudeSDKClient | None = None
         self.session_id: str | None = None
@@ -176,6 +241,64 @@ class ChatSession:
 
         return [list_boards, compile_sketch, upload_sketch, serial_read]
 
+    # ---------- App Lab tools for Claude (App Lab mode) ----------
+    def _applab_tools(self) -> list[Any]:
+        lab = self.applab
+        assert lab is not None
+
+        @tool("list_apps", "List the user's App Lab apps (folder, name, status).", {})
+        async def list_apps(args: dict[str, Any]) -> dict[str, Any]:
+            return _text(json.dumps(await lab.list_apps(), indent=2))
+
+        @tool("create_app", "Create a new App Lab app from App Lab's template. "
+              "Returns its folder; then edit its files.", {
+                  "name": Annotated[str, "App name: letters, digits, spaces, _ or -"],
+                  "description": Annotated[str, "One-line description"],
+              })
+        async def create_app(args: dict[str, Any]) -> dict[str, Any]:
+            name = (args.get("name") or "").strip()
+            if not valid_app_name(name):
+                return _text("Invalid name. Use letters, digits, spaces, _ or -, starting with a letter.")
+            folder = await lab.new_app(name, args.get("description") or "")
+            await self.hub.send({"type": "files_changed"})
+            files = sorted(p.relative_to(lab.workspace).as_posix()
+                           for p in (lab.workspace / folder).rglob("*") if p.is_file())
+            return _text(f"Created app folder {folder}. Files:\n" + "\n".join(files))
+
+        @tool("run_app", "Compile and flash the app's sketch and start the app, like "
+              "Run in App Lab. Stops any other running app first.", {
+                  "app": Annotated[str, "App folder name in the apps directory"],
+              })
+        async def run_app(args: dict[str, Any]) -> dict[str, Any]:
+            code, out = await lab.start(args["app"])
+            head = "App started.\n" if code == 0 else "App FAILED to start.\n"
+            return _text(head + _short(out, 8000))
+
+        @tool("stop_app", "Stop the running app.", {})
+        async def stop_app(args: dict[str, Any]) -> dict[str, Any]:
+            code, out = await lab.stop()
+            return _text(_short(out, 2000))
+
+        @tool("read_app_logs", "Read the running app's Python output for a few seconds.", {
+            "seconds": Annotated[float, "How long to listen, 1-30"],
+        })
+        async def read_app_logs(args: dict[str, Any]) -> dict[str, Any]:
+            seconds = max(1.0, min(30.0, float(args.get("seconds") or 5)))
+            lines = await lab.read_logs(seconds)
+            return _text(_short("\n".join(lines[-300:]), 8000) if lines else "No log output.")
+
+        @tool("serial_read", "Read the microcontroller's serial (Monitor) output for a "
+              "few seconds.", {
+                  "seconds": Annotated[float, "How long to listen, 1-30"],
+              })
+        async def serial_read(args: dict[str, Any]) -> dict[str, Any]:
+            seconds = max(1.0, min(30.0, float(args.get("seconds") or 5)))
+            lines = await lab.read_serial(seconds)
+            return _text(_short("\n".join(lines[-300:]), 8000) if lines
+                         else f"No serial output in {seconds:.0f} s.")
+
+        return [list_apps, create_app, run_app, stop_app, read_app_logs, serial_read]
+
     # ---------- permission prompt in the WebUI ----------
     async def _can_use_tool(self, name: str, tool_input: dict[str, Any],
                             ctx: ToolPermissionContext) -> Any:
@@ -200,13 +323,22 @@ class ChatSession:
     # ---------- Claude session ----------
     async def _ensure_client(self) -> ClaudeSDKClient:
         if self.client is None:
+            if self.applab is not None:
+                workspace, prompt = self.applab.workspace, APPLAB_PROMPT_APPEND
+                servers = {"applab": create_sdk_mcp_server("applab", tools=self._applab_tools())}
+                allowed = APPLAB_ALLOWED_TOOLS
+            else:
+                assert self.cli is not None
+                workspace, prompt = self.cli.workspace, SYSTEM_PROMPT_APPEND
+                servers = {"arduino": create_sdk_mcp_server("arduino", tools=self._tools())}
+                allowed = ALLOWED_TOOLS
             options = ClaudeAgentOptions(
-                cwd=str(self.cli.workspace),
+                cwd=str(workspace),
                 model=DEFAULT_MODEL,
                 system_prompt={"type": "preset", "preset": "claude_code",
-                               "append": SYSTEM_PROMPT_APPEND},
-                mcp_servers={"arduino": create_sdk_mcp_server("arduino", tools=self._tools())},
-                allowed_tools=ALLOWED_TOOLS,
+                               "append": prompt},
+                mcp_servers=servers,
+                allowed_tools=allowed,
                 permission_mode="default",
                 can_use_tool=self._can_use_tool,
                 # Don't load settings files: their allow rules or hooks could
@@ -258,6 +390,9 @@ class ChatSession:
 
     def _with_context(self, text: str) -> str:
         s = self.selection
+        if self.applab is not None:
+            return text + (f"\n\n[Current selection in the WebUI - open file: "
+                           f"{s.get('file') or 'none'}]")
         note = (
             "\n\n[Current selection in the WebUI - "
             f"open file: {s.get('file') or 'none'}; "
