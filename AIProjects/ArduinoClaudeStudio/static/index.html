@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Arduino Claude Studio</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/material-darker.min.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="toolbar">
+    <strong class="brand">Arduino Claude Studio</strong>
+    <label>Board
+      <select id="board"><option value="">Select a board…</option></select>
+    </label>
+    <label>Port
+      <select id="port"><option value="">No port</option></select>
+    </label>
+    <button id="refresh" title="Look for boards again">↻</button>
+    <span class="spacer"></span>
+    <button id="save" title="Ctrl+S">Save</button>
+    <button id="compile">✓ Compile</button>
+    <button id="upload" class="primary">→ Upload</button>
+  </header>
+
+  <main class="layout">
+    <aside class="files">
+      <div class="pane-head">
+        <span>Sketches</span>
+        <button id="new-sketch" title="New sketch">＋</button>
+      </div>
+      <ul id="file-list"></ul>
+      <div id="workspace-path" class="muted small"></div>
+    </aside>
+
+    <section class="center">
+      <div class="pane-head">
+        <span id="current-file">No file open</span>
+        <span id="dirty" class="muted" hidden>● unsaved</span>
+      </div>
+      <div id="editor"></div>
+
+      <div class="bottom">
+        <div class="tabs">
+          <button class="tab active" data-tab="build">Build log</button>
+          <button class="tab" data-tab="serial">Serial monitor</button>
+          <span class="spacer"></span>
+          <span id="build-status" class="muted small"></span>
+        </div>
+        <pre id="build" class="console"></pre>
+        <div id="serial-pane" hidden>
+          <div class="serial-controls">
+            <label>Baud
+              <select id="baud">
+                <option selected>9600</option><option>19200</option><option>38400</option>
+                <option>57600</option><option>115200</option>
+              </select>
+            </label>
+            <button id="serial-toggle">Open</button>
+            <button id="serial-clear">Clear</button>
+            <input id="serial-input" placeholder="Send to board…">
+          </div>
+          <pre id="serial" class="console"></pre>
+        </div>
+      </div>
+    </section>
+
+    <aside class="chat">
+      <div class="pane-head">
+        <span>Claude</span>
+        <span class="spacer"></span>
+        <button id="new-chat" title="Start a new conversation">New chat</button>
+      </div>
+      <div id="messages"></div>
+      <form id="chat-form">
+        <textarea id="prompt" rows="3"
+          placeholder="Ask Claude to write, fix or run a sketch… (Enter to send, Shift+Enter for a new line)"></textarea>
+        <div class="chat-actions">
+          <span id="chat-status" class="muted small"></span>
+          <button type="button" id="stop" hidden>Stop</button>
+          <button type="submit" id="send" class="primary">Send</button>
+        </div>
+      </form>
+    </aside>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.1.6/purify.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
