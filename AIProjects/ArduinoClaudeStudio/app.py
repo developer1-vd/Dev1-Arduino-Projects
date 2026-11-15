@@ -1,0 +1,223 @@
+"""Arduino Claude Studio - a local WebUI for coding Arduino with Claude Code.
+
+Run:  python app.py            (then open http://127.0.0.1:8765)
+Options (environment variables):
+  WORKSPACE     folder with your sketches (default: ./workspace)
+  PORT          web server port (default: 8765)
+  CLAUDE_MODEL  model for the chat (default: claude-opus-5-5)
+  ARDUINO_CLI   path to arduino-cli (default: arduino-cli on PATH)
+
+The server only listens on 127.0.0.1: it can edit files and run arduino-cli
+on this computer, so it must not be reachable from the network.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import os
+from pathlib import Path
+
+import uvicorn
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel
+
+from arduino import ArduinoCli, Hub, SerialMonitor
+from claude_agent import ChatSession
+
+HERE = Path(__file__).resolve().parent
+WORKSPACE = Path(os.environ.get("WORKSPACE", HERE / "workspace")).resolve()
+WORKSPACE.mkdir(parents=True, exist_ok=True)
+
+SKIP_DIRS = {".git", "build", "__pycache__", "node_modules", ".claude"}
+MAX_FILE_BYTES = 1_000_000
+
+hub = Hub()
+cli = ArduinoCli(WORKSPACE, hub, os.environ.get("ARDUINO_CLI", "arduino-cli"))
+monitor = SerialMonitor(hub)
+app = FastAPI(title="Arduino Claude Studio")
+
+
+def safe_path(rel: str) -> Path:
+    """Resolve a path from the browser, refusing anything outside the workspace."""
+    p = (WORKSPACE / rel).resolve()
+    if p != WORKSPACE and WORKSPACE not in p.parents:
+        raise HTTPException(400, "Path is outside the workspace")
+    return p
+
+
+# ---------------- files ----------------
+@app.get("/api/info")
+async def info() -> dict:
+    return {"workspace": str(WORKSPACE), "arduino_cli": cli.available()}
+
+
+@app.get("/api/files")
+async def list_files() -> list[str]:
+    files = []
+    for p in sorted(WORKSPACE.rglob("*")):
+        rel = p.relative_to(WORKSPACE)
+        if any(part in SKIP_DIRS or part.startswith(".") for part in rel.parts):
+            continue
+        if p.is_file() and p.stat().st_size <= MAX_FILE_BYTES:
+            files.append(rel.as_posix())
+    return files
+
+
+@app.get("/api/file")
+async def read_file(path: str) -> dict:
+    p = safe_path(path)
+    if not p.is_file():
+        raise HTTPException(404, "File not found")
+    return {"path": path, "content": p.read_text(errors="replace")}
+
+
+class FileBody(BaseModel):
+    path: str
+    content: str
+
+
+@app.put("/api/file")
+async def write_file(body: FileBody) -> dict:
+    p = safe_path(body.path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(body.content)
+    return {"ok": True}
+
+
+class NewSketch(BaseModel):
+    name: str
+
+
+@app.post("/api/sketch")
+async def new_sketch(body: NewSketch) -> dict:
+    name = "".join(c for c in body.name if c.isalnum() or c in "_-")
+    if not name or not name[0].isalpha():
+        raise HTTPException(400, "Use letters, digits, _ or -, starting with a letter")
+    folder = safe_path(name)
+    ino = folder / f"{name}.ino"
+    if ino.exists():
+        raise HTTPException(409, "That sketch already exists")
+    folder.mkdir(parents=True, exist_ok=True)
+    ino.write_text("void setup() {\n  Serial.begin(9600);\n}\n\nvoid loop() {\n\n}\n")
+    return {"path": ino.relative_to(WORKSPACE).as_posix()}
+
+
+# ---------------- boards, compile, upload ----------------
+@app.get("/api/boards")
+async def boards() -> dict:
+    if not cli.available():
+        raise HTTPException(500, "arduino-cli not found - see README")
+    connected, installed = await asyncio.gather(
+        cli.list_boards(), cli.list_installed_boards(), return_exceptions=True)
+    return {
+        "connected": connected if isinstance(connected, list) else [],
+        "installed": installed if isinstance(installed, list) else [],
+    }
+
+
+class BuildBody(BaseModel):
+    sketch: str
+    fqbn: str
+    port: str | None = None
+
+
+@app.post("/api/compile")
+async def compile_sketch(body: BuildBody) -> dict:
+    try:
+        code, _ = await cli.compile(body.sketch, body.fqbn)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": code == 0}
+
+
+@app.post("/api/upload")
+async def upload_sketch(body: BuildBody) -> dict:
+    if not body.port:
+        raise HTTPException(400, "Select a port first")
+    try:
+        code, _ = await cli.upload(body.sketch, body.fqbn, body.port, monitor)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": code == 0}
+
+
+# ---------------- serial monitor ----------------
+class SerialOpen(BaseModel):
+    port: str
+    baud: int = 9600
+
+
+@app.post("/api/serial/open")
+async def serial_open(body: SerialOpen) -> dict:
+    try:
+        await monitor.open(body.port, body.baud)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True}
+
+
+@app.post("/api/serial/close")
+async def serial_close() -> dict:
+    await monitor.close()
+    return {"ok": True}
+
+
+class SerialSend(BaseModel):
+    text: str
+
+
+@app.post("/api/serial/send")
+async def serial_send(body: SerialSend) -> dict:
+    try:
+        await monitor.write(body.text)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True}
+
+
+# ---------------- websocket: chat + live events ----------------
+@app.websocket("/ws")
+async def websocket(ws: WebSocket) -> None:
+    await ws.accept()
+    hub.add(ws)
+    session = ChatSession(ws, hub, cli, monitor)
+    task: asyncio.Task | None = None
+    try:
+        while True:
+            msg = await ws.receive_json()
+            kind = msg.get("type")
+            if kind == "selection":
+                session.selection.update({k: msg.get(k) for k in ("fqbn", "port", "baud", "file")})
+            elif kind == "prompt":
+                # Run in the background so permission answers and Stop still arrive
+                task = asyncio.create_task(session.ask(msg.get("text", "")))
+            elif kind == "interrupt":
+                await session.interrupt()
+            elif kind == "permission":
+                session.answer_permission(msg.get("id", ""), bool(msg.get("allow")))
+            elif kind == "reset":
+                await session.reset()
+    except WebSocketDisconnect:
+        pass
+    finally:
+        hub.remove(ws)
+        if task and not task.done():
+            task.cancel()
+        await session.close()
+
+
+@app.get("/")
+async def index() -> FileResponse:
+    return FileResponse(HERE / "static" / "index.html")
+
+
+app.mount("/static", StaticFiles(directory=HERE / "static"), name="static")
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", "8765"))
+    print(f"Arduino Claude Studio: http://127.0.0.1:{port}")
+    print(f"Workspace: {WORKSPACE}")
+    uvicorn.run(app, host="127.0.0.1", port=port)
