@@ -11,23 +11,26 @@
 <body>
   <header class="toolbar">
     <strong class="brand">Arduino Claude Studio</strong>
-    <label>Board
+    <label class="arduino-only">Board
       <select id="board"><option value="">Select a board…</option></select>
     </label>
-    <label>Port
+    <label class="arduino-only">Port
       <select id="port"><option value="">No port</option></select>
     </label>
-    <button id="refresh" title="Look for boards again">↻</button>
+    <button id="refresh" class="arduino-only" title="Look for boards again">↻</button>
+    <span id="app-status" class="applab-only muted small"></span>
     <span class="spacer"></span>
     <button id="save" title="Ctrl+S">Save</button>
-    <button id="compile">✓ Compile</button>
-    <button id="upload" class="primary">→ Upload</button>
+    <button id="compile" class="arduino-only">✓ Compile</button>
+    <button id="upload" class="primary arduino-only">→ Upload</button>
+    <button id="stop-app" class="applab-only">■ Stop app</button>
+    <button id="run-app" class="primary applab-only">▶ Run app</button>
   </header>
 
   <main class="layout">
     <aside class="files">
       <div class="pane-head">
-        <span>Sketches</span>
+        <span id="files-title">Sketches</span>
         <button id="new-sketch" title="New sketch">＋</button>
       </div>
       <ul id="file-list"></ul>
@@ -43,15 +46,17 @@
 
       <div class="bottom">
         <div class="tabs">
-          <button class="tab active" data-tab="build">Build log</button>
+          <button class="tab active" data-tab="build" id="build-tab">Build log</button>
+          <button class="tab applab-only" data-tab="applog">App log</button>
           <button class="tab" data-tab="serial">Serial monitor</button>
           <span class="spacer"></span>
           <span id="build-status" class="muted small"></span>
         </div>
         <pre id="build" class="console"></pre>
+        <pre id="applog" class="console" hidden></pre>
         <div id="serial-pane" hidden>
           <div class="serial-controls">
-            <label>Baud
+            <label class="arduino-only">Baud
               <select id="baud">
                 <option selected>9600</option><option>19200</option><option>38400</option>
                 <option>57600</option><option>115200</option>

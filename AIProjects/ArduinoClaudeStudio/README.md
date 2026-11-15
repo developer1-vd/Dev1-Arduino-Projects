@@ -25,7 +25,19 @@ board connected to your computer.
 └───────────┴─────────────────────────────────┴────────────────────────┘
 ```
 
-## Requirements
+It has two modes, picked automatically:
+
+| Mode | Runs on | Projects | Run with |
+|---|---|---|---|
+| **Computer mode** | Windows / macOS / Linux, board plugged in over USB | Arduino sketches | `arduino-cli` |
+| **App Lab mode** | The Arduino UNO Q / VENTUNO Q itself | App Lab apps (sketch + Python) in `~/ArduinoApps` | App Lab's engine, `arduino-app-cli` |
+
+App Lab mode is described in [On the UNO Q / VENTUNO Q (App Lab mode)](#on-the-uno-q--ventuno-q-app-lab-mode).
+It isn't an app you import into App Lab: App Lab apps run in a container
+that can't compile, flash or start apps, so Studio runs next to App Lab on
+the board instead.
+
+## Requirements (computer mode)
 
 1. **Python 3.10+**
 2. **arduino-cli**: install it from <https://arduino.github.io/arduino-cli/latest/installation/>,
@@ -71,7 +83,8 @@ python app.py
 
 | Variable | Default | What it does |
 |---|---|---|
-| `WORKSPACE` | `./workspace` | Folder with your sketches. Point it at another folder to work on those, e.g. `WORKSPACE=../../ModulinoProjects ./run.sh`. |
+| `MODE` | `auto` | `arduino` (computer mode), `applab` (on the board) or `auto` (App Lab mode if `arduino-app-cli` is installed). |
+| `WORKSPACE` | `./workspace` (`~/ArduinoApps` in App Lab mode) | Folder with your sketches. Point it at another folder to work on those, e.g. `WORKSPACE=../../ModulinoProjects ./run.sh`. |
 | `PORT` | `8765` | Web server port. |
 | `CLAUDE_MODEL` | `claude-opus-5-5` | Model for the chat. |
 | `ARDUINO_CLI` | `arduino-cli` | Path to `arduino-cli` if it isn't on your PATH. |
@@ -97,6 +110,77 @@ Claude always gets the selected board, port, baud rate and open file with
 your message. **New chat** starts a fresh conversation, and **Stop**
 interrupts Claude.
 
+## On the UNO Q / VENTUNO Q (App Lab mode)
+
+Run Studio on the board's Linux and it switches to App Lab mode by itself
+(it finds `arduino-app-cli`). Then:
+
+- The file list shows your App Lab apps from `~/ArduinoApps`, the same apps
+  you see in App Lab. **＋** creates a new app from App Lab's template.
+- **▶ Run app** runs the app of the open file, exactly like Run in App Lab:
+  it compiles and flashes the sketch and starts the Python side. Any other
+  running app is stopped first, because only one app can run at a time.
+  **■ Stop app** stops it.
+- **Run log** shows the start output (compile errors appear here), **App log**
+  shows the Python output, and **Serial monitor** shows the
+  microcontroller's `Monitor` output.
+- Claude can create apps, write the sketch and Python, run them, fix errors
+  and read the logs and serial output to check the result.
+
+### Setup on the board
+
+You need a terminal on the board: open one on the board's desktop
+(single-board-computer mode), or connect from your computer with
+`ssh arduino@<board-name>.local` (the board name is the one you set in App
+Lab, and the password is the board's password).
+
+1. Get the project onto the board (if the repository is private, `git clone`
+   asks for your GitHub login; or copy the `ArduinoClaudeStudio` folder over
+   with `scp -r`):
+   ```bash
+   git clone https://github.com/developer1-vd/Dev1-Arduino-Projects.git
+   ```
+   ```bash
+   cd Dev1-Arduino-Projects/AIProjects/ArduinoClaudeStudio
+   ```
+2. If `python3 -m venv` complains that venv is missing, install it:
+   ```bash
+   sudo apt install -y python3-venv
+   ```
+3. Give it access to Claude, either with an API key:
+   ```bash
+   export ANTHROPIC_API_KEY=<your key>
+   ```
+   or by installing Claude Code and logging in once (`claude`, then `/login`):
+   ```bash
+   curl -fsSL https://claude.ai/install.sh | bash
+   ```
+4. Start it:
+   ```bash
+   ./run.sh
+   ```
+
+### Open it in your browser
+
+On the board's own desktop, open <http://127.0.0.1:8765>.
+
+From your computer, Studio is reachable only through an SSH tunnel, so
+nobody else on your network can use it. Run this on your computer, keep it
+open, then open <http://127.0.0.1:8765>:
+
+```bash
+ssh -L 8765:127.0.0.1:8765 arduino@<board-name>.local
+```
+
+### Notes for App Lab mode
+
+- Leave App Lab itself idle while Studio runs an app, or stop the app in one
+  before starting it in the other. They control the same board.
+- Starting an app takes a while (it compiles the Modulino libraries); that's
+  the same wait as in App Lab.
+- On the board Studio uses Claude through the network, and the board needs
+  internet access (the same Wi-Fi you set up in App Lab).
+
 ## What Claude may do
 
 Claude runs on your computer, so the app limits what it can do without
@@ -105,8 +189,9 @@ asking:
 | Allowed without asking | Asks you first (Allow / Deny in the chat) |
 |---|---|
 | Read, search and edit files in the workspace | Any other shell command |
-| `arduino-cli` commands (compile, upload, install libraries and cores) | Web access and other tools |
-| The app's Arduino tools: list boards, compile, upload, read serial | |
+| Computer mode: `arduino-cli` commands (compile, upload, install libraries and cores) | Web access and other tools |
+| Computer mode: the Arduino tools (list boards, compile, upload, read serial) | |
+| App Lab mode: the App Lab tools (list, create, run and stop apps, read logs and serial) | |
 
 Claude Code settings files (`~/.claude/settings.json` and project settings)
 are not loaded, so their allow rules or hooks can't bypass these prompts.
@@ -120,6 +205,7 @@ it.
 | `app.py` | FastAPI server: file API, compile/upload/serial endpoints, and a WebSocket for chat and live output. |
 | `claude_agent.py` | One Claude Code session per browser tab through `ClaudeSDKClient`. It adds Arduino tools as an in-process MCP server and turns permission requests into Allow/Deny prompts. |
 | `arduino.py` | `arduino-cli` wrapper and serial monitor. Output is streamed to every open browser tab. |
+| `applab.py` | App Lab mode: drives `arduino-app-cli` (list, create, start and stop apps, Python logs, microcontroller monitor). |
 | `static/` | The WebUI (CodeMirror editor, chat, consoles). Loaded from CDNs, so the browser needs internet. |
 | `workspace/` | Your sketches (starts with `Blink`). |
 
@@ -130,9 +216,9 @@ buttons use, so anything Claude compiles or uploads shows up in the build log.
 
 - **Cost:** each chat message uses your Claude plan or API credits. The
   chat shows the cost of each request.
-- **UNO Q / VENTUNO Q:** `arduino-cli` (and so this app) programs the
-  board's microcontroller only. App Lab apps with a Python side still run
-  from Arduino App Lab.
+- **UNO Q / VENTUNO Q from your computer:** in computer mode, `arduino-cli`
+  programs the board's microcontroller only. To work on App Lab apps with a
+  Python side, run Studio on the board in App Lab mode.
 - **Serial port busy:** only one program can use the port at a time. Close
   the Arduino IDE's Serial Monitor (or any other serial program) before
   uploading from here.

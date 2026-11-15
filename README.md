@@ -31,7 +31,7 @@ Most projects come in two versions:
 
 | Project | What it does |
 |---|---|
-| [ArduinoClaudeStudio](AIProjects/ArduinoClaudeStudio/) | A local WebUI for writing Arduino code with Claude Code: editor, compile and upload with `arduino-cli`, serial monitor, and a Claude chat that can write, fix, upload and test sketches on your board. |
+| [ArduinoClaudeStudio](AIProjects/ArduinoClaudeStudio/) | A local WebUI for writing Arduino code with Claude Code: editor, compile and upload, serial monitor, and a Claude chat that can write, fix, upload and test code on your board. Runs on your computer (sketches via `arduino-cli`) or directly on the UNO Q / VENTUNO Q (App Lab apps via App Lab's engine). |
 
 ## Getting started
 
@@ -48,7 +48,10 @@ connector (`Wire1`) automatically.
 
 ### Modulino projects in Arduino App Lab (UNO Q / VENTUNO Q)
 
-Create a new app in App Lab and copy in the `*App` folder's files:
+The easiest way is to import a ready-made zip from
+[`ModulinoProjects/AppLabImports/`](ModulinoProjects/AppLabImports/): download
+the zip with GitHub's **Download raw file** button, then use **Import app** in
+App Lab. Or create a new app and copy in the `*App` folder's files:
 `sketch/sketch.ino`, `sketch/sketch.yaml` and `python/main.py`. Then press
 **Run**. Each app's `SETUP.md` covers power, wiring and troubleshooting.
 
@@ -65,6 +68,7 @@ Python 3.10+ and `arduino-cli`, log in to Claude Code, then run `./run.sh`
 | `Modulino.h` or `Arduino_Modulino.h: No such file` | Install the **Arduino_Modulino** library. In App Lab, copy the app's `sketch.yaml`, or add the library in the app's Libraries panel. |
 | A module is "NOT found" | Re-seat the Qwiic cables, then unplug the board's power completely and plug it back in. |
 | The buzzer is quiet | It has no volume control. It's loudest near 4000 Hz, so use pitches close to that. |
+| App Lab import: "missing or misplaced app.yaml" | Import a zip from `ModulinoProjects/AppLabImports/`, not the repository's **Code → Download ZIP**. |
 | App Lab takes a long time to start | Compiling the Modulino libraries takes a while. Turn on **Run at startup** to skip the wait. |
 
 ## License
