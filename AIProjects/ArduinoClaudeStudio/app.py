@@ -70,7 +70,8 @@ def safe_path(rel: str) -> Path:
 @app.get("/api/info")
 async def info() -> dict:
     return {"workspace": str(WORKSPACE), "mode": MODE,
-            "arduino_cli": applab.available() if applab else cli.available()}
+            "arduino_cli": applab.available() if applab else cli.available(),
+            "arduino_cli_path": "" if applab else cli.cli}
 
 
 @app.get("/api/files")
@@ -306,6 +307,12 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", "8765"))
     print(f"Arduino Claude Studio ({MODE} mode): http://127.0.0.1:{port}")
     print(f"Workspace: {WORKSPACE}")
+    if MODE == "arduino":
+        if cli.available():
+            print(f"arduino-cli: {cli.cli}")
+        else:
+            print("arduino-cli NOT found. Add its folder to PATH, or start with")
+            print("  ARDUINO_CLI=/full/path/to/arduino-cli ./run.sh")
     if MODE == "applab":
         print("On your computer, open it through an SSH tunnel:")
         print(f"  ssh -L {port}:127.0.0.1:{port} arduino@<board-name>.local")

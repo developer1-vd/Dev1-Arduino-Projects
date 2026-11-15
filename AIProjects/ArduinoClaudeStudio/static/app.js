@@ -446,7 +446,10 @@ function connect() {
   }
   if (!info.arduino_cli) {
     const tool = info.mode === "applab" ? "arduino-app-cli" : "arduino-cli";
-    appendLine($("build"), `${tool} was not found. Install it and restart (see README).`, "line-error");
+    appendLine($("build"), `${tool} was not found. If it's installed, its folder isn't on PATH: ` +
+      `start Studio with ARDUINO_CLI=/full/path/to/${tool} ./run.sh (see README).`, "line-error");
+  } else if (info.arduino_cli_path) {
+    appendLine($("build"), `Using ${info.arduino_cli_path}`, "line-head");
   }
   connect();
   const files = await loadFiles();

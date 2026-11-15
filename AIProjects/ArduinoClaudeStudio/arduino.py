@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import shutil
 import threading
 import time
@@ -47,17 +48,43 @@ class Hub:
             self._sockets.discard(ws)
 
 
+def find_arduino_cli(name: str = "arduino-cli") -> str | None:
+    """Find arduino-cli on PATH or in the places installers usually put it.
+
+    Arduino's install script puts it in ./bin of the folder you ran it from,
+    which often isn't on PATH, so look there too.
+    """
+    if Path(name).expanduser().is_file():
+        return str(Path(name).expanduser())
+    if found := shutil.which(name):
+        return found
+    exe = name + (".exe" if os.name == "nt" else "")
+    home = Path.home()
+    here = Path(__file__).resolve().parent
+    candidates = [
+        Path.cwd() / "bin", here / "bin", home / "bin", home / ".local" / "bin",
+        home / "Downloads" / "bin", Path("/usr/local/bin"), Path("/opt/homebrew/bin"),
+        Path("/snap/bin"), home / "go" / "bin",
+        home / "AppData" / "Local" / "Programs" / "Arduino CLI",
+        Path("C:/Program Files/Arduino CLI"),
+    ]
+    for folder in candidates:
+        if (folder / exe).is_file():
+            return str(folder / exe)
+    return None
+
+
 class ArduinoCli:
     """Runs arduino-cli and streams its output to the Hub."""
 
     def __init__(self, workspace: Path, hub: Hub, cli: str = "arduino-cli") -> None:
         self.workspace = workspace
         self.hub = hub
-        self.cli = cli
+        self.cli = find_arduino_cli(cli) or cli
         self.lock = asyncio.Lock()  # one compile/upload at a time
 
     def available(self) -> bool:
-        return shutil.which(self.cli) is not None
+        return Path(self.cli).is_file() or shutil.which(self.cli) is not None
 
     def sketch_path(self, sketch: str) -> Path:
         """Resolve a sketch folder (or .ino file) inside the workspace."""

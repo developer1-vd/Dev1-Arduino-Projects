@@ -214,6 +214,15 @@ buttons use, so anything Claude compiles or uploads shows up in the build log.
 
 ## Notes
 
+- **"arduino-cli was not found" although it's installed:** Studio looks on
+  your PATH and in the usual install folders (`./bin`, `~/bin`,
+  `~/.local/bin`, `/usr/local/bin`, ...). Arduino's install script puts
+  `arduino-cli` in a `bin` folder inside the folder you ran it from. Find it
+  with `find ~ -name arduino-cli -type f 2>/dev/null`, then either move it to
+  `~/.local/bin`, or start Studio with
+  `ARDUINO_CLI=/full/path/to/arduino-cli ./run.sh`. When Studio finds it, the
+  terminal and the build log show which one it uses.
+
 - **Cost:** each chat message uses your Claude plan or API credits. The
   chat shows the cost of each request.
 - **UNO Q / VENTUNO Q from your computer:** in computer mode, `arduino-cli`
