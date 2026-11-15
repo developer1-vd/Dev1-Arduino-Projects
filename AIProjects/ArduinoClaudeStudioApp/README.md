@@ -39,6 +39,17 @@ App Lab mode instead.
    with your board's name (or use its IP address) and open it on a computer
    on the same network. The `code` is an access code, so only people with
    the link can use the page.
+
+   **If the page doesn't open** ("can't resolve" or "site can't be reached"),
+   your computer can't find the board by name. Either:
+   - use the board's **IP address** instead of `<board-name>.local` (find it
+     in your router's device list, or run `hostname -I` on the board), or
+   - go over the **USB cable** with ADB: on the computer run
+     `adb forward tcp:8765 tcp:8765`, then open
+     `http://127.0.0.1:8765/?code=<access code>`. On Linux, first add the
+     UNO Q USB permission rule from Arduino's UNO Q user manual
+     ("Linux Host Setup") and replug the board, or `adb devices` won't list
+     it.
 4. **Connect Claude.** The page asks for one of:
    - an **Anthropic API key** (`sk-ant-api…`, from console.anthropic.com), or
    - a **Claude Code token** (`sk-ant-oat…`), to use your Claude
