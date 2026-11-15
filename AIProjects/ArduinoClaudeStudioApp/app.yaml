@@ -1,0 +1,6 @@
+name: Claude Studio
+icon: 🤖
+description: Code this app's sketch with Claude from your browser. Open http://<board-name>.local:8765 (the link with its access code is in the app's console).
+ports:
+  - 8765
+bricks: []
