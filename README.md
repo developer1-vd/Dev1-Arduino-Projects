@@ -9,6 +9,7 @@ an AI coding tool for Arduino.
 |---|---|
 | [`ModulinoProjects/`](ModulinoProjects/) | Projects built with Modulino modules connected over Qwiic |
 | [`AIProjects/`](AIProjects/) | Projects that use AI with Arduino |
+| [`GameMode/`](GameMode/) | Gaming on the UNO Q / VENTUNO Q: game mode script and a Modulino arcade app |
 
 ### ModulinoProjects
 
@@ -33,6 +34,13 @@ Most projects come in two versions:
 |---|---|
 | [ArduinoClaudeStudio](AIProjects/ArduinoClaudeStudio/) | A local WebUI for writing Arduino code with Claude Code: editor, compile and upload, serial monitor, and a Claude chat that can write, fix, upload and test code on your board. Runs on your computer (sketches via `arduino-cli`) or directly on the UNO Q / VENTUNO Q (App Lab apps via App Lab's engine). |
 | [ArduinoClaudeStudioApp](AIProjects/ArduinoClaudeStudioApp/) · [import zip](AIProjects/AppLabImports/) | Claude Studio as an App Lab app: import it, press Run, and code the board's sketch with Claude from your browser. Flash changes with Stop + Run in App Lab. |
+
+### GameMode
+
+| Project | What it does |
+|---|---|
+| [board-setup](GameMode/board-setup/) | `gamemode.sh`: game mode on/off for the board's Linux (CPU at full speed, App Lab app paused), cloud-gaming shortcuts (GeForce NOW, Xbox Cloud Gaming for Fortnite etc.), optional Minecraft Java launcher. |
+| [ModulinoArcadeApp](GameMode/ModulinoArcadeApp/) · [import zip](GameMode/AppLabImports/) | App Lab app: Reaction and Simon games with Modulino Buttons + Buzzer on the LED matrix, high scores in the browser. |
 
 ## Getting started
 

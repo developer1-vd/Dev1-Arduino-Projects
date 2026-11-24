@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modulino Arcade</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>🕹️ Modulino Arcade</h1>
+    <span id="conn" class="pill">connecting…</span>
+  </header>
+
+  <main>
+    <section class="card now">
+      <h2>Now</h2>
+      <p id="status">Waiting for the board…</p>
+      <p id="modules" class="muted"></p>
+      <ul id="rounds"></ul>
+      <div class="start">
+        <button data-game="1">▶ Reaction <small>(button A)</small></button>
+        <button data-game="2">▶ Simon <small>(button B)</small></button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Reaction <span class="muted">· best average, lower is better</span></h2>
+      <ol id="scores-1" class="scores"></ol>
+      <button class="clear" data-clear="1">Clear</button>
+    </section>
+
+    <section class="card">
+      <h2>Simon <span class="muted">· longest sequence</span></h2>
+      <ol id="scores-2" class="scores"></ol>
+      <button class="clear" data-clear="2">Clear</button>
+    </section>
+
+    <section class="card how">
+      <h2>How to play</h2>
+      <p><b>Reaction:</b> after the countdown, wait for a button's LED (and that third of the
+        LED matrix) to light, then press that button as fast as you can. 5 rounds. Pressing
+        early, late or the wrong button adds 1000 ms.</p>
+      <p><b>Simon:</b> watch the lights and tones, then repeat the sequence on the buttons
+        (A = left, B = middle, C = right). It grows by one each round.</p>
+    </section>
+  </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

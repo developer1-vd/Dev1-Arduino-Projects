@@ -1,0 +1,5 @@
+name: Modulino Arcade
+icon: 🕹️
+description: Reaction and Simon games with the Modulino Buttons, Buzzer and the LED matrix; scores and high scores in your browser.
+bricks:
+  - arduino:web_ui
